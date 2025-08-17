@@ -6,6 +6,7 @@ import random
 from sprites import Player, Enemy, Bullet, Explosion
 from sounds import SoundManager
 from state_manager import StateManager, GameState
+from object_pool import PoolManager
 from config import FPS, ENEMY_SPAWN_DELAY, DIFFICULTY_INCREASE_INTERVAL
 
 # 保持向后兼容的游戏状态常量
@@ -35,6 +36,9 @@ class GameLogic:
         # 音效管理器
         self.sound_manager = sound_manager
         self.sound_enabled = sound_manager is not None
+        
+        # 对象池管理器
+        self.pool_manager = PoolManager()
         
         # 敌机生成相关
         self.enemy_spawn_timer = 0
@@ -117,6 +121,17 @@ class GameLogic:
         # 使用状态管理器结束游戏
         if self.state_manager.end_game():
             self.game_status = GAME_OVER
+            
+            # 清理所有精灵并返回到对象池
+            if self.bullets:
+                for bullet in self.bullets.copy():
+                    bullet.kill()
+                    self.pool_manager.return_bullet(bullet)
+            
+            if self.enemies:
+                for enemy in self.enemies.copy():
+                    enemy.kill()
+                    self.pool_manager.return_enemy(enemy)
     
     def toggle_pause(self):
         """切换暂停状态"""
@@ -153,6 +168,9 @@ class GameLogic:
             # 更新所有精灵
             self.all_sprites.update()
             
+            # 清理超出屏幕的精灵
+            self.cleanup_offscreen_sprites()
+            
             # 生成敌机
             self.enemy_spawn_timer += 1
             if self.enemy_spawn_timer >= self.enemy_spawn_delay:
@@ -161,14 +179,17 @@ class GameLogic:
     
     def handle_player_shooting(self, is_shooting):
         """处理玩家射击"""
-        if self.state_manager.is_playing() and is_shooting and self.player:
-            bullet = self.player.shoot()
+        if self.state_manager.is_playing() and is_shooting and self.player and self.player.can_shoot():
+            # 从对象池获取子弹
+            bullet = self.pool_manager.get_bullet(self.player.rect.centerx, self.player.rect.top)
             if bullet:
                 self.bullets.add(bullet)
                 self.all_sprites.add(bullet)
                 # 播放射击音效
                 if self.sound_enabled and self.sound_manager:
                     self.sound_manager.play_sound('shoot')
+                # 重置射击冷却
+                self.player.reset_shoot_cooldown()
     
     def check_collisions(self):
         """检测碰撞"""
@@ -176,13 +197,16 @@ class GameLogic:
             return
         
         # 检测子弹与敌机的碰撞
-        hits = pygame.sprite.groupcollide(self.bullets, self.enemies, True, False)
+        hits = pygame.sprite.groupcollide(self.bullets, self.enemies, False, False)
         for bullet, enemy_list in hits.items():
             for enemy in enemy_list:
                 # 敌机被击中
                 if enemy.hit():  # 如果敌机被摧毁
                     self.score += enemy.score_value
                     enemy.kill()
+                    
+                    # 将敌机返回到对象池
+                    self.pool_manager.return_enemy(enemy)
                     
                     # 播放爆炸音效
                     if self.sound_enabled and self.sound_manager:
@@ -198,10 +222,15 @@ class GameLogic:
                 else:
                     # 敌机受伤但未被摧毁，设置受伤效果定时器
                     pygame.time.set_timer(pygame.USEREVENT + 1, 200)  # 200ms后恢复
+                
+                # 子弹击中敌机后销毁，返回到对象池
+                bullet.kill()
+                self.pool_manager.return_bullet(bullet)
+                break  # 子弹只能击中一个敌机
         
         # 检测玩家与敌机的碰撞
         if self.player:
-            hits = pygame.sprite.spritecollide(self.player, self.enemies, True)
+            hits = pygame.sprite.spritecollide(self.player, self.enemies, False)
             for hit in hits:
                 if self.player.hit():
                     # 创建爆炸效果
@@ -211,6 +240,10 @@ class GameLogic:
                     # 播放被击中音效
                     if self.sound_enabled and self.sound_manager:
                         self.sound_manager.play_sound('hit')
+                
+                # 敌机与玩家碰撞后销毁，返回到对象池
+                hit.kill()
+                self.pool_manager.return_enemy(hit)
                 
                 # 生成新的敌机
                 self.spawn_enemy()
@@ -252,10 +285,27 @@ class GameLogic:
             # 高难度更多特殊敌机
             enemy_type = random.choices(enemy_types, weights=[50, 30, 20])[0]
         
-        enemy = Enemy(enemy_type)
-        if self.all_sprites and self.enemies:
+        # 从对象池获取敌机
+        enemy = self.pool_manager.get_enemy(enemy_type)
+        if enemy and self.all_sprites and self.enemies:
             self.all_sprites.add(enemy)
             self.enemies.add(enemy)
+    
+    def cleanup_offscreen_sprites(self):
+        """清理超出屏幕的精灵并返回到对象池"""
+        from config import SCREEN_HEIGHT, SCREEN_WIDTH
+        
+        # 清理超出屏幕的子弹
+        for bullet in self.bullets.copy():
+            if bullet.rect.bottom < 0 or bullet.rect.top > SCREEN_HEIGHT:
+                bullet.kill()
+                self.pool_manager.return_bullet(bullet)
+        
+        # 清理超出屏幕的敌机
+        for enemy in self.enemies.copy():
+            if enemy.rect.top > SCREEN_HEIGHT or enemy.rect.right < 0 or enemy.rect.left > SCREEN_WIDTH:
+                enemy.kill()
+                self.pool_manager.return_enemy(enemy)
     
     def handle_enemy_damage_recovery(self):
         """处理敌机受伤后的恢复"""
