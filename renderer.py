@@ -4,6 +4,7 @@
 import pygame
 import os
 from game_logic import GAME_INIT, GAME_START, GAME_OVER, GAME_PAUSED
+from state_manager import GameState
 
 # 屏幕常量
 SCREEN_WIDTH = 480
@@ -104,25 +105,31 @@ class Renderer:
             self.background.fill(BLACK)
     
     def render(self, game_data):
-        """根据游戏状态绘制画面"""
+        """根据游戏状态绘制画面 - 使用状态机模式"""
         # 绘制背景
         self.screen.blit(self.background, (0, 0))
         
-        game_status = game_data['game_status']
+        # 获取当前状态（优先使用状态机状态）
+        current_state = game_data.get('current_state', None)
+        if current_state is None:
+            # 回退到旧的状态系统
+            game_status = game_data['game_status']
+            current_state = self._convert_legacy_status(game_status)
         
-        if game_status == GAME_INIT:
-            # 绘制游戏开始界面
+        # 根据状态机状态进行渲染
+        if current_state == GameState.INIT:
+            # 绘制游戏初始界面
             self.draw_start_screen(game_data)
         
-        elif game_status == GAME_START:
-            # 绘制所有精灵
+        elif current_state == GameState.PLAYING:
+            # 绘制游戏进行界面
             if game_data['all_sprites']:
                 game_data['all_sprites'].draw(self.screen)
             
             # 绘制游戏UI面板
             self.draw_game_ui(game_data)
         
-        elif game_status == GAME_PAUSED:
+        elif current_state == GameState.PAUSED:
             # 绘制暂停状态下的游戏画面
             if game_data['all_sprites']:
                 game_data['all_sprites'].draw(self.screen)
@@ -133,9 +140,17 @@ class Renderer:
             # 绘制暂停提示
             self.draw_pause_screen()
         
-        elif game_status == GAME_OVER:
-            # 绘制游戏开始/结束界面
+        elif current_state == GameState.GAME_OVER:
+            # 绘制游戏结束界面
             self.draw_start_screen(game_data)
+        
+        elif current_state == GameState.INSTRUCTIONS:
+            # 绘制操作说明界面
+            self.draw_instructions_screen(game_data)
+        
+        # 绘制状态信息（调试用）
+        if current_state:
+            self.draw_state_info(current_state)
         
         # 更新屏幕显示
         pygame.display.flip()
@@ -266,3 +281,50 @@ class Renderer:
         
         self.screen.blit(pause_text, pause_rect)
         self.screen.blit(resume_text, resume_rect)
+    
+    def _convert_legacy_status(self, game_status):
+        """将旧的游戏状态转换为新的状态机状态"""
+        status_map = {
+            GAME_INIT: GameState.INIT,
+            GAME_START: GameState.PLAYING,
+            GAME_PAUSED: GameState.PAUSED,
+            GAME_OVER: GameState.GAME_OVER
+        }
+        return status_map.get(game_status, GameState.INIT)
+    
+    def draw_instructions_screen(self, game_data):
+        """绘制操作说明界面"""
+        # 创建渐变背景
+        for y in range(SCREEN_HEIGHT):
+            color_intensity = int(20 + (y / SCREEN_HEIGHT) * 40)
+            color = (0, 0, color_intensity)
+            pygame.draw.line(self.screen, color, (0, y), (SCREEN_WIDTH, y))
+        
+        # 显示操作说明
+        self._draw_instructions()
+        
+        # 返回提示
+        if self.use_chinese:
+            back_text = self.font.render("按H键返回", True, (255, 255, 0))
+        else:
+            back_text = self.font.render("Press H to Go Back", True, (255, 255, 0))
+        
+        back_rect = back_text.get_rect(center=(SCREEN_WIDTH//2, SCREEN_HEIGHT - 50))
+        self.screen.blit(back_text, back_rect)
+    
+    def draw_state_info(self, current_state):
+        """绘制状态信息（调试用）"""
+        # 在屏幕右上角显示当前状态
+        state_name = current_state.name if hasattr(current_state, 'name') else str(current_state)
+        state_text = self.font_small.render(f"State: {state_name}", True, (255, 255, 0))
+        state_rect = state_text.get_rect(topright=(SCREEN_WIDTH - 10, 10))
+        
+        # 添加半透明背景
+        bg_rect = pygame.Rect(state_rect.left - 5, state_rect.top - 2, 
+                             state_rect.width + 10, state_rect.height + 4)
+        bg_surface = pygame.Surface((bg_rect.width, bg_rect.height))
+        bg_surface.set_alpha(128)
+        bg_surface.fill((0, 0, 0))
+        self.screen.blit(bg_surface, bg_rect)
+        
+        self.screen.blit(state_text, state_rect)

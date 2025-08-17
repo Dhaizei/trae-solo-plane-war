@@ -5,8 +5,9 @@ import pygame
 import random
 from sprites import Player, Enemy, Bullet, Explosion
 from sounds import SoundManager
+from state_manager import StateManager, GameState
 
-# 游戏状态常量
+# 保持向后兼容的游戏状态常量
 GAME_INIT = 0  # 游戏初始化
 GAME_START = 1  # 游戏开始
 GAME_OVER = 2  # 游戏结束
@@ -20,9 +21,15 @@ class GameLogic:
     
     def __init__(self, sound_manager=None):
         """初始化游戏逻辑"""
-        # 游戏状态
+        # 状态管理器
+        self.state_manager = StateManager(GameState.INIT)
+        
+        # 保持向后兼容的游戏状态
         self.game_status = GAME_INIT
         self.show_instructions = False  # 是否显示操作说明
+        
+        # 注册状态变化回调
+        self._register_state_callbacks()
         
         # 游戏分数和生命
         self.score = 0
@@ -44,10 +51,48 @@ class GameLogic:
         self.explosions = None
         self.player = None
     
+    def _register_state_callbacks(self):
+        """注册状态变化回调函数"""
+        # 注册进入游戏状态的回调
+        self.state_manager.register_enter_callback(GameState.PLAYING, self._on_enter_playing)
+        self.state_manager.register_enter_callback(GameState.PAUSED, self._on_enter_paused)
+        self.state_manager.register_enter_callback(GameState.GAME_OVER, self._on_enter_game_over)
+        self.state_manager.register_enter_callback(GameState.INSTRUCTIONS, self._on_enter_instructions)
+        
+        # 注册退出游戏状态的回调
+        self.state_manager.register_exit_callback(GameState.PLAYING, self._on_exit_playing)
+        self.state_manager.register_exit_callback(GameState.PAUSED, self._on_exit_paused)
+    
+    def _on_enter_playing(self):
+        """进入游戏状态时的回调"""
+        print("进入游戏状态")
+    
+    def _on_enter_paused(self):
+        """进入暂停状态时的回调"""
+        print("游戏暂停")
+    
+    def _on_enter_game_over(self):
+        """进入游戏结束状态时的回调"""
+        print("游戏结束")
+    
+    def _on_enter_instructions(self):
+        """进入操作说明状态时的回调"""
+        print("显示操作说明")
+    
+    def _on_exit_playing(self):
+        """退出游戏状态时的回调"""
+        print("退出游戏状态")
+    
+    def _on_exit_paused(self):
+        """退出暂停状态时的回调"""
+        print("退出暂停状态")
+    
     def start_game(self):
         """开始游戏"""
-        self.game_status = GAME_START
-        self.score = 0
+        # 使用状态管理器开始游戏
+        if self.state_manager.start_game():
+            self.game_status = GAME_START
+            self.score = 0
         
         # 重置敌机生成相关参数
         self.enemy_spawn_timer = 0
@@ -71,23 +116,39 @@ class GameLogic:
     
     def game_over(self):
         """游戏结束"""
-        self.game_status = GAME_OVER
+        # 使用状态管理器结束游戏
+        if self.state_manager.end_game():
+            self.game_status = GAME_OVER
     
     def toggle_pause(self):
         """切换暂停状态"""
-        if self.game_status == GAME_START:
-            self.game_status = GAME_PAUSED
-        elif self.game_status == GAME_PAUSED:
-            self.game_status = GAME_START
+        # 使用状态管理器切换暂停状态
+        if self.state_manager.toggle_pause():
+            if self.state_manager.is_playing():
+                self.game_status = GAME_START
+            elif self.state_manager.is_paused():
+                self.game_status = GAME_PAUSED
     
     def toggle_instructions(self):
         """切换操作说明显示"""
-        if self.game_status in [GAME_INIT, GAME_OVER]:
-            self.show_instructions = not self.show_instructions
+        if self.state_manager.is_state(GameState.INSTRUCTIONS):
+            # 如果当前在说明页面，返回到之前的状态
+            if self.state_manager.previous_state == GameState.INIT:
+                self.state_manager.transition_to(GameState.INIT)
+                self.game_status = GAME_INIT
+            elif self.state_manager.previous_state == GameState.GAME_OVER:
+                self.state_manager.transition_to(GameState.GAME_OVER)
+                self.game_status = GAME_OVER
+            self.show_instructions = False
+        elif self.game_status in [GAME_INIT, GAME_OVER]:
+            # 显示操作说明
+            if self.state_manager.show_instructions():
+                self.show_instructions = True
     
     def update(self):
         """更新游戏状态"""
-        if self.game_status == GAME_START:
+        # 使用状态管理器检查游戏状态
+        if self.state_manager.is_playing():
             # 更新难度等级
             self.update_difficulty()
             
@@ -102,7 +163,7 @@ class GameLogic:
     
     def handle_player_shooting(self, is_shooting):
         """处理玩家射击"""
-        if self.game_status == GAME_START and is_shooting and self.player:
+        if self.state_manager.is_playing() and is_shooting and self.player:
             bullet = self.player.shoot()
             if bullet:
                 self.bullets.add(bullet)
@@ -113,7 +174,7 @@ class GameLogic:
     
     def check_collisions(self):
         """检测碰撞"""
-        if self.game_status != GAME_START:
+        if not self.state_manager.is_playing():
             return
         
         # 检测子弹与敌机的碰撞
