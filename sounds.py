@@ -8,16 +8,17 @@
 import pygame
 import numpy as np
 import os
+from config import SOUND_VOLUME, SOUND_FREQUENCY, SOUND_SAMPLE_RATE
 
 class SoundManager:
     """音效管理器"""
     
     def __init__(self):
         """初始化音效管理器"""
-        pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
+        pygame.mixer.init(frequency=SOUND_SAMPLE_RATE, size=-16, channels=2, buffer=512)
         self.sounds = {}
-        self.music_volume = 0.7
-        self.sound_volume = 0.5
+        self.music_volume = SOUND_VOLUME
+        self.sound_volume = SOUND_VOLUME
         
     def load_sounds(self):
         """加载所有音效"""
@@ -76,7 +77,7 @@ class SoundManager:
         level_up_sound = self._create_sweep(start_freq=200, end_freq=800, duration=0.5)
         self._save_sound(level_up_sound, os.path.join(sounds_dir, "level_up.wav"))
     
-    def _create_beep(self, frequency=440, duration=0.5, sample_rate=22050):
+    def _create_beep(self, frequency=SOUND_FREQUENCY, duration=0.5, sample_rate=SOUND_SAMPLE_RATE):
         """创建哔声音效"""
         frames = int(duration * sample_rate)
         arr = np.zeros(frames)
@@ -89,7 +90,7 @@ class SoundManager:
         
         return (arr * 32767).astype(np.int16)
     
-    def _create_noise(self, duration=0.5, sample_rate=22050):
+    def _create_noise(self, duration=0.5, sample_rate=SOUND_SAMPLE_RATE):
         """创建噪音音效"""
         frames = int(duration * sample_rate)
         # 生成随机噪音
@@ -101,7 +102,7 @@ class SoundManager:
         
         return (arr * 32767).astype(np.int16)
     
-    def _create_sweep(self, start_freq=200, end_freq=800, duration=0.5, sample_rate=22050):
+    def _create_sweep(self, start_freq=200, end_freq=800, duration=0.5, sample_rate=SOUND_SAMPLE_RATE):
         """创建频率扫描音效"""
         frames = int(duration * sample_rate)
         arr = np.zeros(frames)

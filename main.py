@@ -3,10 +3,11 @@
 
 import pygame
 import sys
-from game_logic import GameLogic, GAME_INIT, GAME_START, GAME_OVER, GAME_PAUSED, FPS
+from game_logic import GameLogic
 from renderer import Renderer
 from input_handler import InputHandler
-from state_manager import GameState, StateManager
+from state_manager import StateManager, GameState
+from config import SCREEN_WIDTH, SCREEN_HEIGHT, FPS
 
 class Game:
     """游戏主类 - 重构后的简化版本"""

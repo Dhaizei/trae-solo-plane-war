@@ -6,15 +6,13 @@ import random
 from sprites import Player, Enemy, Bullet, Explosion
 from sounds import SoundManager
 from state_manager import StateManager, GameState
+from config import FPS, ENEMY_SPAWN_DELAY, DIFFICULTY_INCREASE_INTERVAL
 
 # 保持向后兼容的游戏状态常量
 GAME_INIT = 0  # 游戏初始化
 GAME_START = 1  # 游戏开始
 GAME_OVER = 2  # 游戏结束
 GAME_PAUSED = 3  # 游戏暂停
-
-# 游戏常量
-FPS = 60
 
 class GameLogic:
     """游戏逻辑管理类，负责处理游戏核心逻辑"""
@@ -40,8 +38,8 @@ class GameLogic:
         
         # 敌机生成相关
         self.enemy_spawn_timer = 0
-        self.enemy_spawn_delay = 60  # 初始敌机生成间隔
-        self.base_enemy_spawn_delay = 60  # 基础敌机生成间隔
+        self.enemy_spawn_delay = ENEMY_SPAWN_DELAY  # 初始敌机生成间隔
+        self.base_enemy_spawn_delay = ENEMY_SPAWN_DELAY  # 基础敌机生成间隔
         self.difficulty_level = 1  # 难度等级
         
         # 精灵组
@@ -96,8 +94,8 @@ class GameLogic:
         
         # 重置敌机生成相关参数
         self.enemy_spawn_timer = 0
-        self.enemy_spawn_delay = 60
-        self.base_enemy_spawn_delay = 60
+        self.enemy_spawn_delay = ENEMY_SPAWN_DELAY
+        self.base_enemy_spawn_delay = ENEMY_SPAWN_DELAY
         self.difficulty_level = 1
         
         # 创建精灵组

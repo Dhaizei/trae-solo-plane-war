@@ -4,15 +4,12 @@
 import pygame
 import random
 import os
-
-# 游戏常量
-SCREEN_WIDTH = 480  # 屏幕宽度
-SCREEN_HEIGHT = 700  # 屏幕高度
-
-# 颜色常量
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-RED = (255, 0, 0)
+from config import (
+    SCREEN_WIDTH, SCREEN_HEIGHT, WHITE, BLACK, RED, YELLOW, BLUE,
+    PLAYER_SPEED, PLAYER_LIVES, PLAYER_INVINCIBLE_TIME, PLAYER_SHOOT_COOLDOWN,
+    ENEMY_BASE_SPEED, ENEMY_TYPES, BULLET_SPEED, BULLET_SIZE, BULLET_COLOR,
+    IMAGE_FILES
+)
 
 class Player(pygame.sprite.Sprite):
     """玩家飞机类"""
@@ -22,7 +19,7 @@ class Player(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self)
         
         # 加载玩家飞机图像
-        player_img_path = os.path.join('resources', 'images', 'player.png')
+        player_img_path = IMAGE_FILES['player']
         if os.path.exists(player_img_path):
             self.image = pygame.image.load(player_img_path).convert_alpha()
         else:
@@ -37,10 +34,10 @@ class Player(pygame.sprite.Sprite):
         self.rect.bottom = SCREEN_HEIGHT - 10
         
         # 设置飞机速度
-        self.speed = 8
+        self.speed = PLAYER_SPEED
         
         # 设置生命值
-        self.lives = 3
+        self.lives = PLAYER_LIVES
         
         # 设置无敌时间（毫秒）
         self.invincible = False
@@ -54,7 +51,7 @@ class Player(pygame.sprite.Sprite):
         # 处理无敌状态
         if self.invincible:
             current_time = pygame.time.get_ticks()
-            if current_time - self.invincible_time > 3000:  # 3秒无敌时间
+            if current_time - self.invincible_time > PLAYER_INVINCIBLE_TIME:
                 self.invincible = False
         
         # 处理射击冷却
@@ -91,7 +88,7 @@ class Player(pygame.sprite.Sprite):
         if self.shoot_cooldown <= 0:
             # 创建子弹
             bullet = Bullet(self.rect.centerx, self.rect.top)
-            self.shoot_cooldown = 10  # 设置射击冷却时间
+            self.shoot_cooldown = PLAYER_SHOOT_COOLDOWN  # 设置射击冷却时间
             return bullet
         return None
     
@@ -106,7 +103,7 @@ class Player(pygame.sprite.Sprite):
 
 class Enemy(pygame.sprite.Sprite):
     """敌机基类"""
-    base_speed = 2  # 基础速度，可以被动态调整
+    base_speed = ENEMY_BASE_SPEED  # 基础速度，可以被动态调整
     
     def __init__(self, enemy_type="normal"):
         """初始化敌机"""
@@ -126,41 +123,25 @@ class Enemy(pygame.sprite.Sprite):
     
     def setup_enemy_properties(self):
         """根据敌机类型设置属性"""
+        enemy_config = ENEMY_TYPES.get(self.enemy_type, ENEMY_TYPES['normal'])
+        
+        # 加载敌机图像
         if self.enemy_type == "normal":
-            # 普通敌机 - 红色
-            enemy_img_path = os.path.join('resources', 'images', 'enemy.png')
-            if os.path.exists(enemy_img_path):
-                self.image = pygame.image.load(enemy_img_path).convert_alpha()
-            else:
-                self.image = pygame.Surface((40, 30))
-                self.image.fill(RED)
-            self.base_speed_y = Enemy.base_speed
-            self.health = 1
-            self.score_value = 10
+            enemy_img_path = IMAGE_FILES['enemy']
+        else:
+            enemy_img_path = IMAGE_FILES.get(f'enemy_{self.enemy_type}', IMAGE_FILES['enemy'])
             
-        elif self.enemy_type == "fast":
-            # 快速敌机 - 黄色，速度快但血量少
-            enemy_img_path = os.path.join('resources', 'images', 'enemy_fast.png')
-            if os.path.exists(enemy_img_path):
-                self.image = pygame.image.load(enemy_img_path).convert_alpha()
-            else:
-                self.image = pygame.Surface((35, 25))
-                self.image.fill((255, 255, 0))  # YELLOW
-            self.base_speed_y = Enemy.base_speed + 2
-            self.health = 1
-            self.score_value = 20
-            
-        elif self.enemy_type == "heavy":
-            # 重型敌机 - 蓝色，速度慢但血量多
-            enemy_img_path = os.path.join('resources', 'images', 'enemy_heavy.png')
-            if os.path.exists(enemy_img_path):
-                self.image = pygame.image.load(enemy_img_path).convert_alpha()
-            else:
-                self.image = pygame.Surface((50, 40))
-                self.image.fill((0, 0, 255))  # BLUE
-            self.base_speed_y = max(1, Enemy.base_speed - 1)
-            self.health = 3
-            self.score_value = 50
+        if os.path.exists(enemy_img_path):
+            self.image = pygame.image.load(enemy_img_path).convert_alpha()
+        else:
+            # 使用配置中的尺寸和颜色创建矩形
+            self.image = pygame.Surface(enemy_config['size'])
+            self.image.fill(enemy_config['color'])
+        
+        # 设置敌机属性
+        self.base_speed_y = Enemy.base_speed + enemy_config['speed_modifier']
+        self.health = enemy_config['health']
+        self.score_value = enemy_config['score_value']
     
     def update(self):
         """更新敌机位置"""
@@ -193,13 +174,13 @@ class Bullet(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self)
         
         # 加载子弹图像
-        bullet_img_path = os.path.join('resources', 'images', 'bullet.png')
+        bullet_img_path = IMAGE_FILES['bullet']
         if os.path.exists(bullet_img_path):
             self.image = pygame.image.load(bullet_img_path).convert_alpha()
         else:
             # 如果图像不存在，使用矩形代替
-            self.image = pygame.Surface((5, 10))
-            self.image.fill(WHITE)
+            self.image = pygame.Surface(BULLET_SIZE)
+            self.image.fill(BULLET_COLOR)  # 使用配置中的子弹颜色
         
         self.rect = self.image.get_rect()
         
@@ -208,7 +189,7 @@ class Bullet(pygame.sprite.Sprite):
         self.rect.bottom = y
         
         # 设置子弹速度
-        self.speed = -10  # 负值表示向上移动
+        self.speed = -BULLET_SPEED  # 负值表示向上移动
     
     def update(self):
         """更新子弹状态"""

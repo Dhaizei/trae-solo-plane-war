@@ -5,15 +5,10 @@ import pygame
 import os
 from game_logic import GAME_INIT, GAME_START, GAME_OVER, GAME_PAUSED
 from state_manager import GameState
-
-# 屏幕常量
-SCREEN_WIDTH = 480
-SCREEN_HEIGHT = 700
-
-# 颜色常量
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-RED = (255, 0, 0)
+from config import (
+    SCREEN_WIDTH, SCREEN_HEIGHT, WHITE, BLACK, RED, GREEN, BLUE,
+    FONT_SIZE_LARGE, FONT_SIZE_MEDIUM, FONT_SIZE_SMALL
+)
 
 class Renderer:
     """渲染管理类，负责处理所有渲染相关功能"""
@@ -61,10 +56,10 @@ class Renderer:
         # 加载字体
         if font_path:
             try:
-                self.font = pygame.font.Font(font_path, 36)
-                self.font_large = pygame.font.Font(font_path, 72)
-                self.font_medium = pygame.font.Font(font_path, 48)
-                self.font_small = pygame.font.Font(font_path, 24)
+                self.font = pygame.font.Font(font_path, FONT_SIZE_MEDIUM)
+                self.font_large = pygame.font.Font(font_path, FONT_SIZE_LARGE)
+                self.font_medium = pygame.font.Font(font_path, FONT_SIZE_MEDIUM)
+                self.font_small = pygame.font.Font(font_path, FONT_SIZE_SMALL)
                 self.use_chinese = False  # 系统没有中文字体，使用英文
                 print(f"使用字体文件: {font_path}")
             except Exception as e:
@@ -87,10 +82,10 @@ class Renderer:
     
     def _load_default_fonts(self):
         """加载默认字体"""
-        self.font = pygame.font.Font(None, 36)
-        self.font_large = pygame.font.Font(None, 72)
-        self.font_medium = pygame.font.Font(None, 48)
-        self.font_small = pygame.font.Font(None, 24)
+        self.font = pygame.font.Font(None, FONT_SIZE_MEDIUM)
+        self.font_large = pygame.font.Font(None, FONT_SIZE_LARGE)
+        self.font_medium = pygame.font.Font(None, FONT_SIZE_MEDIUM)
+        self.font_small = pygame.font.Font(None, FONT_SIZE_SMALL)
         self.use_chinese = False
         print("使用pygame默认字体")
     
