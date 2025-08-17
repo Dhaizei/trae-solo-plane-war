@@ -1,0 +1,113 @@
+[project]
+name = "plane-war-python"
+version = "1.0.0"
+description = "一个使用Python和Pygame开发的飞机大战游戏"
+authors = [
+    {name = "Developer", email = "developer@example.com"}
+]
+readme = "README.md"
+requires-python = ">=3.8.1"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Games/Entertainment :: Arcade",
+]
+keywords = ["game", "pygame", "arcade", "plane", "war"]
+
+# 项目依赖
+dependencies = [
+    "pygame>=2.5.0",
+    "numpy>=1.24.0",
+]
+
+# 可选依赖
+[project.optional-dependencies]
+audio = [
+    "scipy>=1.10.0",  # 用于高级音效处理
+]
+dev = [
+    "pytest>=7.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+]
+
+# 项目URL
+[project.urls]
+Homepage = "https://github.com/username/plane-war-python"
+Repository = "https://github.com/username/plane-war-python"
+"Bug Tracker" = "https://github.com/username/plane-war-python/issues"
+
+# 构建系统配置
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# 指定要包含的文件
+include = [
+    "main.py",
+    "sprites.py", 
+    "sounds.py",
+    "create_resources.py",
+    "resources/"
+]
+
+# 项目脚本入口
+[project.scripts]
+plane-war = "main:main"
+
+# uv工具配置
+[tool.uv]
+# 开发依赖组
+dev-dependencies = [
+    "pytest>=7.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+]
+
+# 代码格式化工具配置
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+extend-exclude = '''
+# A regex preceded by ^/ will apply only to files and directories
+# in the root of the project.
+^/resources/  # exclude resources directory
+'''
+
+# 类型检查配置
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+# Flake8配置
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503"]
+exclude = [
+    ".git",
+    "__pycache__",
+    "resources",
+    ".venv",
+    "venv",
+]
+
+# pytest配置
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
