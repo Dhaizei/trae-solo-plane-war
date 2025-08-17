@@ -8,6 +8,7 @@ from sounds import SoundManager
 from state_manager import StateManager, GameState
 from object_pool import PoolManager
 from config import FPS, ENEMY_SPAWN_DELAY, DIFFICULTY_INCREASE_INTERVAL
+from optimized_collision import optimized_groupcollide, optimized_spritecollide, get_collision_detector
 
 # 保持向后兼容的游戏状态常量
 GAME_INIT = 0  # 游戏初始化
@@ -39,6 +40,9 @@ class GameLogic:
         
         # 对象池管理器
         self.pool_manager = PoolManager()
+        
+        # 初始化优化的碰撞检测器
+        self.collision_detector = get_collision_detector()
         
         # 敌机生成相关
         self.enemy_spawn_timer = 0
@@ -192,12 +196,13 @@ class GameLogic:
                 self.player.reset_shoot_cooldown()
     
     def check_collisions(self):
-        """检测碰撞"""
+        """检测碰撞（使用优化算法）"""
         if not self.state_manager.is_playing():
             return
         
+        # 使用优化的碰撞检测算法
         # 检测子弹与敌机的碰撞
-        hits = pygame.sprite.groupcollide(self.bullets, self.enemies, False, False)
+        hits = optimized_groupcollide(self.bullets, self.enemies, False, False)
         for bullet, enemy_list in hits.items():
             for enemy in enemy_list:
                 # 敌机被击中
@@ -228,9 +233,9 @@ class GameLogic:
                 self.pool_manager.return_bullet(bullet)
                 break  # 子弹只能击中一个敌机
         
-        # 检测玩家与敌机的碰撞
+        # 检测玩家与敌机的碰撞（使用优化算法）
         if self.player:
-            hits = pygame.sprite.spritecollide(self.player, self.enemies, False)
+            hits = optimized_spritecollide(self.player, self.enemies, False)
             for hit in hits:
                 if self.player.hit():
                     # 创建爆炸效果
